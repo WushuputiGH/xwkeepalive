@@ -38,7 +38,6 @@ class MainActivity : ComponentActivity() {
                         Button(
                             modifier = Modifier.padding(innerPadding),
                             onClick = {
-                                keepAliveManager.stop()
                             }
                         ) {
                             Text(text = "关闭")

@@ -1,40 +1,36 @@
 package com.zsrh.xwkeepalivelibrary
 
 import android.content.Context
-import android.util.Log
-import androidx.work.CoroutineWorker
+import androidx.work.Worker
 import androidx.work.WorkerParameters
+import android.util.Log
 import kotlinx.coroutines.delay
-import kotlin.coroutines.cancellation.CancellationException
 
 class MyWorker(appContext: Context, workerParams: WorkerParameters) :
-    CoroutineWorker(appContext, workerParams) {
-
+    Worker(appContext, workerParams) {
     private val tag = "MyWorker"
 
-    override suspend fun doWork(): Result {
-        Log.d(tag, "WorkManager 任务开始执行")
+    override fun doWork(): Result {
+        Log.d("MyWorker", "Work 执行开始")
 
-        // 设置 AlarmManager 闹钟
-        AlarmUtil.setAlarm(applicationContext)
-        Log.d(tag, "WorkManager 任务中设置 AlarmManager 闹钟")
-
-        return try {
+        // 在这里执行你的后台任务
+        try {
             for (i in 1..1000) {
                 Log.d(tag, "WorkManager 任务执行中: $i")
-                delay(5000) // 模拟耗时操作
+                Thread.sleep(5000)
             }
-            Log.d(tag, "WorkManager 任务执行成功")
-            Result.success()
-        } catch (e: CancellationException) {
-            Log.e(tag, "WorkManager 任务被取消: ${e.message}")
-            // 重新调度任务
-            return Result.retry()
-        } catch (e: Exception) {
-            Log.e(tag, "WorkManager 任务执行失败: ${e.message}")
-            Result.failure()
-        } finally {
-            Log.d(tag, "WorkManager 任务执行结束")
+
+        } catch (e: InterruptedException) {
+            e.printStackTrace()
         }
+
+        Log.d("MyWorker", "Work 执行完成")
+
+        // Indicate whether the task finished successfully with the Result
+        return Result.success()
     }
+
+
+
+
 }

@@ -1,18 +1,24 @@
 package com.zsrh.xwkeepalivelibrary
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.app.job.JobInfo
 import android.app.job.JobScheduler
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.util.Log
-import androidx.work.BackoffPolicy
+import androidx.core.content.ContextCompat.getSystemService
+
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
 import androidx.work.PeriodicWorkRequest
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkRequest.Companion.MIN_BACKOFF_MILLIS
+import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 class KeepAliveManager(val context: Context) {
@@ -26,94 +32,55 @@ class KeepAliveManager(val context: Context) {
             return
         }
 
-        Log.d(tag, "KeepAliveManager 启动")
-
-        // 设置 AlarmManager
-        AlarmUtil.setAlarm(context)
-        Log.d(tag, "AlarmManager 设置")
-
-        // 调度 JobScheduler
         scheduleJob()
-        Log.d(tag, "JobScheduler 调度")
 
         // 调度 WorkManager
         scheduleWork()
-        Log.d(tag, "WorkManager 调度")
+
+        // 启动 AlarmManager
+        startAlarm()
 
         isInitialized = true
     }
 
-    fun stop() {
-        if (!isInitialized) {
-            Log.d(tag, "KeepAliveManager 未初始化，无需停止")
-            return
-        }
 
-        Log.d(tag, "KeepAliveManager 停止")
-
-        // 取消 AlarmManager
-        AlarmUtil.cancelAlarm(context)
-        Log.d(tag, "AlarmManager 取消")
-
-        // 停止 JobScheduler
-        cancelJob()
-        Log.d(tag, "JobScheduler 停止")
-
-        // 停止 WorkManager
-        cancelWork()
-        Log.d(tag, "WorkManager 停止")
-
-        isInitialized = false
-    }
-
-    fun scheduleJob() {
+    private fun scheduleJob() {
         val componentName = ComponentName(context, MyJobService::class.java)
-        val builder = JobInfo.Builder(123, componentName)
-            .setPeriodic(15 * 60 * 1000) // 15 minutes
-            .setPersisted(true)
-
-        builder.setRequiresCharging(false)
-        builder.setRequiresDeviceIdle(false)
-
-        val jobScheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
-        jobScheduler.schedule(builder.build())
-        Log.d(tag, "JobScheduler 任务调度成功")
-    }
-
-    private fun cancelJob() {
-        val jobScheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
-        jobScheduler.cancel(123)
-        Log.d(tag, "JobScheduler 任务取消成功")
-    }
-
-    fun scheduleWork() {
-        // 创建约束条件
-
-
-        // 创建一次性任务
-        val oneTimeWorkRequest = OneTimeWorkRequest.Builder(MyWorker::class.java)
-            .setBackoffCriteria( // 设置退避策略
-                BackoffPolicy.EXPONENTIAL,
-                MIN_BACKOFF_MILLIS,
-                TimeUnit.MILLISECONDS
-            )
+        val jobInfo = JobInfo.Builder(123, componentName)
+            .setPeriodic(15 * 60 * 1000) // 设置 Job 的执行周期为 15 分钟
+            .setPersisted(true) // 设置设备重启后 Job 是否继续执行
+            .setRequiresCharging(false) // 设置是否需要在充电时执行
+            .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY) // 设置是否需要在有网络连接时执行
             .build()
 
-        // 创建定期任务（例如，每隔 15 分钟执行一次）
-        val periodicWorkRequest = PeriodicWorkRequest.Builder(MyWorker::class.java, 15, TimeUnit.MINUTES)
+        val scheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
+        val result = scheduler.schedule(jobInfo)
+
+        if (result == JobScheduler.RESULT_SUCCESS) {
+            println("Job scheduled successfully!")
+        } else {
+            println("Job scheduled failed!")
+        }
+    }
+
+    private fun scheduleWork() {
+        val workRequest = PeriodicWorkRequestBuilder<MyWorker>(15, TimeUnit.MINUTES)
             .build()
 
-        // 获取 WorkManager 实例
-        val workManager = WorkManager.getInstance(context)
+        WorkManager.getInstance(context).enqueue(workRequest)
+    }
 
-        // 提交一次性任务
-        workManager.enqueue(oneTimeWorkRequest)
-        Log.d(tag, "一次性 WorkManager 任务提交成功")
+    private fun startAlarm() {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(context, AlarmReceiver::class.java)
+        intent.action = "com.example.backgroundkeepalive.ALARM_ACTION"
+        val pendingIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
-        // 提交定期任务
-        workManager.enqueueUniquePeriodicWork("uniqueWorkName",
-            ExistingPeriodicWorkPolicy.KEEP,periodicWorkRequest)
-        Log.d(tag, "定期 WorkManager 任务提交成功")
+        val calendar = Calendar.getInstance()
+        calendar.timeInMillis = System.currentTimeMillis()
+        calendar.add(Calendar.MINUTE, 10)
+
+        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, 10 * 60 * 1000, pendingIntent)
     }
 
     private fun cancelWork() {
