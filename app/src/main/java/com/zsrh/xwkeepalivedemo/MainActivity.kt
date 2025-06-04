@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -17,25 +18,38 @@ import com.zsrh.xwkeepalivelibrary.BatteryOptimizationUtil
 import com.zsrh.xwkeepalivelibrary.KeepAliveManager
 
 class MainActivity : ComponentActivity() {
+    private lateinit var keepAliveManager: KeepAliveManager
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             XWKeepAliveDemoTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Button(
-                        modifier = Modifier.padding(innerPadding),
-                        onClick = {
-                            BatteryOptimizationUtil.requestIgnoreBatteryOptimization(applicationContext)
+                    Column {
+                        Button(
+                            modifier = Modifier.padding(innerPadding),
+                            onClick = {
+                                keepAliveManager.start()
+                            }
+                        ) {
+                            Text(text = "开启")
                         }
-                    ) {
-                        Text(text = "点击开启忽略电池优化")
+
+                        Button(
+                            modifier = Modifier.padding(innerPadding),
+                            onClick = {
+                                keepAliveManager.stop()
+                            }
+                        ) {
+                            Text(text = "关闭")
+                        }
                     }
                 }
             }
         }
 
-        KeepAliveManager(this).start()
+        keepAliveManager = KeepAliveManager(this)
+
     }
 }
 

@@ -20,11 +20,6 @@
 
 
     <application>
-        <service
-            android:name=".KeepAliveService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="specialUse"/>
 
         <receiver
             android:name=".BootReceiver"
@@ -41,17 +36,15 @@
             android:name=".GuardService"
             android:process=":guard" />
 
+        <receiver android:name=".AlarmReceiver"
+            android:enabled="true"
+            android:exported="true"/>
+
         <service
             android:name=".MyJobService"
+            android:enabled="true"
+            android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
-
-        <receiver
-            android:name=".AlarmReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="com.example.keeplivelibrary.ALARM_ACTION"/>
-            </intent-filter>
-        </receiver>
     </application>
 
 
